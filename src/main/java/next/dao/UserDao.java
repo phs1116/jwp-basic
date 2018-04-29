@@ -1,78 +1,41 @@
 package next.dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
-import core.jdbc.ConnectionManager;
 import next.model.User;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+
 public class UserDao {
-    public void insert(User user) throws SQLException {
-        Connection con = null;
-        PreparedStatement pstmt = null;
-        try {
-            con = ConnectionManager.getConnection();
-            String sql = "INSERT INTO USERS VALUES (?, ?, ?, ?)";
-            pstmt = con.prepareStatement(sql);
-            pstmt.setString(1, user.getUserId());
-            pstmt.setString(2, user.getPassword());
-            pstmt.setString(3, user.getName());
-            pstmt.setString(4, user.getEmail());
+	public static final String UPDATE_QUERY = "UPDATE USERS SET password = ?, name = ?, email = ? WHERE userId = ?";
+	public static final String INSERT_QUERY = "INSERT INTO USERS VALUES (?, ?, ?, ?)";
+	public static final String SELECT_QUERY = "SELECT userId, password, name, email FROM USERS WHERE userId=?";
+	public static final String ALL_SELECT_QUERY = "SELECT userId, password, name, email FROM USERS";
 
-            pstmt.executeUpdate();
-        } finally {
-            if (pstmt != null) {
-                pstmt.close();
-            }
+	public void insert(User user) {
+		JdbcTemplate jdbcTemplate = new JdbcTemplate();
+		jdbcTemplate.update(INSERT_QUERY, user.getUserId(), user.getPassword(), user.getName(), user.getEmail());
+	}
 
-            if (con != null) {
-                con.close();
-            }
-        }
-    }
+	public void update(User user) {
+		JdbcTemplate jdbcTemplate = new JdbcTemplate();
+		jdbcTemplate.update(UPDATE_QUERY,  user.getPassword(),user.getName(), user.getEmail(), user.getUserId());
+	}
 
-    public void update(User user) throws SQLException {
-        // TODO 구현 필요함.
-    }
+	public List<User> findAll() {
+		JdbcTemplate<User> jdbcTemplate = new JdbcTemplate<>();
+		return jdbcTemplate.query(ALL_SELECT_QUERY, this::getUser);
+	}
 
-    public List<User> findAll() throws SQLException {
-        // TODO 구현 필요함.
-        return new ArrayList<User>();
-    }
+	public User findByUserId(String userId) {
+		JdbcTemplate<User> jdbcTemplate = new JdbcTemplate<>();
+		return jdbcTemplate.queryForObject(SELECT_QUERY, this::getUser, userId);
+	}
 
-    public User findByUserId(String userId) throws SQLException {
-        Connection con = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            con = ConnectionManager.getConnection();
-            String sql = "SELECT userId, password, name, email FROM USERS WHERE userid=?";
-            pstmt = con.prepareStatement(sql);
-            pstmt.setString(1, userId);
-
-            rs = pstmt.executeQuery();
-
-            User user = null;
-            if (rs.next()) {
-                user = new User(rs.getString("userId"), rs.getString("password"), rs.getString("name"),
-                        rs.getString("email"));
-            }
-
-            return user;
-        } finally {
-            if (rs != null) {
-                rs.close();
-            }
-            if (pstmt != null) {
-                pstmt.close();
-            }
-            if (con != null) {
-                con.close();
-            }
-        }
-    }
+	private User getUser(ResultSet rs) throws SQLException {
+		return new User(rs.getString("userId"),
+			rs.getString("password"),
+			rs.getString("name"),
+			rs.getString("email"));
+	}
 }

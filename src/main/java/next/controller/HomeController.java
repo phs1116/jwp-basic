@@ -1,17 +1,20 @@
 package next.controller;
 
+import core.annotation.Controller;
+import core.annotation.RequestMapping;
+import core.mvc.ModelAndView;
+import next.dao.QuestionDao;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import next.dao.QuestionDao;
-import core.mvc.AbstractController;
-import core.mvc.ModelAndView;
-
-public class HomeController extends AbstractController {
+@Controller
+@RequestMapping(value = "/")
+public class HomeController {
     private QuestionDao questionDao = QuestionDao.getInstance();
 
-    @Override
-    public ModelAndView execute(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        return jspView("home.jsp").addObject("questions", questionDao.findAll());
+    @RequestMapping
+    public ModelAndView execute(HttpServletRequest request, HttpServletResponse response) {
+        return ModelAndView.newInstanceByJspView("home.jsp").addObject("questions", questionDao.findAll());
     }
 }

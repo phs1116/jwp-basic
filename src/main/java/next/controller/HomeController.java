@@ -11,7 +11,11 @@ import javax.servlet.http.HttpServletResponse;
 @Controller
 @RequestMapping(value = "/")
 public class HomeController {
-    private QuestionDao questionDao = QuestionDao.getInstance();
+    private QuestionDao questionDao;
+
+    public HomeController(QuestionDao questionDao) {
+        this.questionDao = questionDao;
+    }
 
     @RequestMapping
     public ModelAndView execute(HttpServletRequest request, HttpServletResponse response) {

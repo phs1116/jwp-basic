@@ -1,16 +1,20 @@
 package next.controller.qna;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import core.mvc.AbstractController;
+import core.mvc.ModelAndView;
 import next.controller.UserSessionUtils;
 import next.dao.QuestionDao;
 import next.model.Question;
-import core.mvc.AbstractController;
-import core.mvc.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 public class UpdateFormQuestionController extends AbstractController {
-    private QuestionDao questionDao = QuestionDao.getInstance();
+    private QuestionDao questionDao;
+
+    public UpdateFormQuestionController(QuestionDao questionDao) {
+        this.questionDao = questionDao;
+    }
 
     @Override
     public ModelAndView execute(HttpServletRequest req, HttpServletResponse resp) throws Exception {

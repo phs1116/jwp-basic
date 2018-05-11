@@ -1,23 +1,20 @@
 package core.nmvc;
 
-import java.io.IOException;
-import java.util.List;
+import com.google.common.collect.Lists;
+import core.mvc.ControllerHandlerAdapter;
+import core.mvc.LegacyHandlerMapping;
+import core.mvc.ModelAndView;
+import core.mvc.View;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Lists;
-
-import core.mvc.ControllerHandlerAdapter;
-import core.mvc.LegacyHandlerMapping;
-import core.mvc.ModelAndView;
-import core.mvc.View;
+import java.io.IOException;
+import java.util.List;
 
 @WebServlet(name = "dispatcher", urlPatterns = "/", loadOnStartup = 1)
 public class DispatcherServlet extends HttpServlet {
@@ -31,7 +28,7 @@ public class DispatcherServlet extends HttpServlet {
     public void init() throws ServletException {
         LegacyHandlerMapping lhm = new LegacyHandlerMapping();
         lhm.initMapping();
-        AnnotationHandlerMapping ahm = new AnnotationHandlerMapping("next.controller");
+        AnnotationHandlerMapping ahm = new AnnotationHandlerMapping("next.controller", "next.dao");
         ahm.initialize();
 
         mappings.add(lhm);

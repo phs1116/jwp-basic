@@ -1,6 +1,7 @@
 package core.di.factory;
 
 import com.google.common.collect.Maps;
+import core.annotation.Controller;
 import core.common.ExceptionWrapFunction;
 import core.common.ExceptionWrapSuplier;
 import org.slf4j.Logger;
@@ -24,6 +25,12 @@ public class BeanFactory {
 	@SuppressWarnings("unchecked")
 	public <T> T getBean(Class<T> requiredType) {
 		return (T) beans.get(requiredType);
+	}
+
+	public Map<Class<?>, Object> getControllers(){
+		return beans.entrySet().stream()
+			.filter(entry -> entry.getKey().isAnnotationPresent(Controller.class))
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 	}
 
 	public void initialize() {

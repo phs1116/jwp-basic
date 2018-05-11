@@ -1,8 +1,8 @@
 package next.dao;
 
-import java.util.List;
-
 import next.model.Question;
+
+import java.util.List;
 
 public interface QuestionDao {
 

@@ -1,22 +1,21 @@
 package core.web.mvc;
 
-import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.Set;
-
-import javax.servlet.http.HttpServletRequest;
-
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import core.annotation.Controller;
+import core.annotation.RequestMapping;
+import core.annotation.RequestMethod;
+import core.di.ApplicationContext;
 import org.reflections.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
-import core.annotation.RequestMapping;
-import core.annotation.RequestMethod;
-import core.di.factory.BeanFactory;
-import core.di.factory.BeanScanner;
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class AnnotationHandlerMapping implements HandlerMapping {
     private static final Logger logger = LoggerFactory.getLogger(AnnotationHandlerMapping.class);
@@ -30,10 +29,8 @@ public class AnnotationHandlerMapping implements HandlerMapping {
     }
 
     public void initialize() {
-        BeanScanner scanner = new BeanScanner(basePackage);
-        BeanFactory beanFactory = new BeanFactory(scanner.scan());
-        beanFactory.initialize();
-        Map<Class<?>, Object> controllers = beanFactory.getControllers();
+        ApplicationContext applicationContext = new ApplicationContext(basePackage);
+        Map<Class<?>, Object> controllers = getControllers(applicationContext);
         Set<Method> methods = getRequestMappingMethods(controllers.keySet());
         for (Method method : methods) {
             RequestMapping rm = method.getAnnotation(RequestMapping.class);
@@ -43,6 +40,12 @@ public class AnnotationHandlerMapping implements HandlerMapping {
         }
 
         logger.info("Initialized AnnotationHandlerMapping!");
+    }
+
+    private Map<Class<?>, Object> getControllers(ApplicationContext applicationContext) {
+        return applicationContext.getBeanClasses().stream().filter(aClass -> aClass.isAnnotationPresent(Controller.class))
+            .map(aClass -> new AbstractMap.SimpleEntry<>(aClass, applicationContext.getBean(aClass)))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private HandlerKey createHandlerKey(RequestMapping rm) {

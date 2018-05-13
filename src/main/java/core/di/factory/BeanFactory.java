@@ -1,33 +1,25 @@
 package core.di.factory;
 
 import com.google.common.collect.Maps;
-import core.annotation.Controller;
-import core.inejctor.FieldPostInjector;
-import core.inejctor.Injector;
-import core.inejctor.SetterPostInjector;
+import core.common.ExceptionWrapConsumer;
+import core.di.bean.BeanDefinition;
+import core.di.bean.BeanDefinitionRegistry;
+import core.di.bean.InjectType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class BeanFactory {
+public class BeanFactory implements BeanDefinitionRegistry {
 	private static final Logger logger = LoggerFactory.getLogger(BeanFactory.class);
-
-	private Set<Class<?>> preInstanticateBeans;
-
-	private List<Injector> injectorList;
 
 	private Map<Class<?>, Object> beans = Maps.newHashMap();
 
-	public BeanFactory(Set<Class<?>> preInstanticateBeans) {
-		this.preInstanticateBeans = preInstanticateBeans;
-		this.injectorList = Arrays.asList(new FieldPostInjector(this), new SetterPostInjector(this));
-	}
-
-	public Set<Class<?>> getPreInstanticateBeans() {
-		return preInstanticateBeans;
-	}
+	private Map<Class<?>, BeanDefinition> beanDefinitions = Maps.newHashMap();
 
 	@SuppressWarnings("unchecked")
 	public void putBean(Class<?> type, Object object) {
@@ -36,24 +28,63 @@ public class BeanFactory {
 
 	@SuppressWarnings("unchecked")
 	public <T> T getBean(Class<T> requiredType) {
-		return (T) beans.get(requiredType);
+		T  bean = requiredType.cast(beans.get(requiredType));
+
+		if(Objects.nonNull(bean)){
+			return bean;
+		}
+
+		Class<?> concreteBeanClass = BeanFactoryUtils.findConcreteClass(requiredType, getBeanClasses());
+		BeanDefinition beanDefinition = beanDefinitions.get(concreteBeanClass);
+		return requiredType.cast(beans.put(concreteBeanClass, inject(beanDefinition)));
 	}
 
-	public Map<Class<?>, Object> getControllers() {
-		return beans.entrySet().stream()
-			.filter(entry -> entry.getKey().isAnnotationPresent(Controller.class))
-			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+	public Set<Class<?>> getBeanClasses() {
+		return beanDefinitions.keySet();
 	}
 
 	public void initialize() {
 		try {
-			preInstanticateBeans.forEach(this::inject);
+			beanDefinitions.entrySet().stream().forEach(entry -> getBean(entry.getKey()));
 		} catch (Exception e) {
 			logger.error(e.getMessage());
 		}
+
 	}
 
-	private void inject(Class<?> clazz) {
-		injectorList.forEach(injector -> injector.inject(clazz));
+	private Object inject(BeanDefinition beanDefinition) {
+		InjectType injectType = beanDefinition.getInjectType();
+		if(injectType == InjectType.CONSTRUCTOR) {
+			return injectByConstructor(beanDefinition);
+		} else if(injectType == InjectType.FIELD) {
+			Object bean = injectByFields(beanDefinition);
+			return bean;
+		} else {
+			return BeanUtils.instantiate(beanDefinition.getBeanClass());
+		}
+	}
+
+	private Object injectByFields(BeanDefinition beanDefinition) {
+		Set<Field> fields = beanDefinition.getInjectFields();
+		Object bean = BeanUtils.instantiate(beanDefinition.getBeanClass());
+		fields.stream().peek(field -> logger.debug("inject field, class : {}, field : {}", beanDefinition.getBeanClass(), field))
+			.peek(field -> field.setAccessible(true))
+			.forEach((ExceptionWrapConsumer<Field>) field -> field.set(bean, getBean(field.getType())));
+		return bean;
+	}
+
+	private Object injectByConstructor(BeanDefinition beanDefinition) {
+		Constructor<?> constructor = beanDefinition.getInjectConstructor();
+		logger.debug("inject by constructor, class : {}, constructor : {}", beanDefinition.getBeanClass(), constructor);
+		Class<?>[] parameterTypes = constructor.getParameterTypes();
+		List<Object> parameters = Arrays.stream(parameterTypes)
+			.map(this::getBean).collect(Collectors.toList());
+		return BeanUtils.instantiateClass(constructor, parameters.toArray());
+	}
+
+	@Override
+	public void registerBeanDefinition(Class<?> clazz, BeanDefinition beanDefinition) {
+		logger.debug("register bean : {}", clazz);
+		beanDefinitions.put(clazz, beanDefinition);
 	}
 }
